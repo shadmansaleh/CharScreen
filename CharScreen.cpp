@@ -1,6 +1,7 @@
 #include "CharScreen.h"
 #include <cstdlib>
 
+//initiates screan by allocating requiared mwmory and cleaning terminal
 void CharScreen::init(int W,int H)
 {
   if( H > 0 && W > 0 )
@@ -19,28 +20,30 @@ void CharScreen::init(int W,int H)
     }else setDefault();
   }else setDefault();
 }
-
+//returns the value of a char in x,y location of screen
 char CharScreen::getVal(char *sc,int x,int y)
 {
+  //check if input is valid
   if( sc && x <= width && y <= height && x >= 0 && y >= 0 )
   {
-    return *( sc + ( width * y + x ));
+    //width+1 is requiared to make the last char of line and the first char of line differ
+    return *( sc + ( ((width +1) * y) + x  ));
   }
   else
     return 0;
 }  
-
+//oposit of getVal it change a char in a location
 inline int CharScreen::setVal(char *sc,int x,int y,char ch)
 {
   if( sc && x <= width && y <= height && x >= 0 && y >= 0 )
-  {
-    *( sc + ( width * y + x )) = ch;
+  {//same as getVal
+    *( sc + ( ((width+1) * y) + x )) = ch;
     return 1;
   }
   else
     return -1;
 }
-
+//it is used to reset the screen or to dustruct it . It sets default vslues
 void CharScreen::setDefault()
 {
   if(scr)
@@ -53,15 +56,15 @@ void CharScreen::setDefault()
   width=0;
 }
 
-
+//draws one char at a time on the screen using ansi excape sequence
 void CharScreen::draw(int x,int y)
 {
   if( x <= width && y <= height && x >= 0 && y >= 0 )
-  {
+  {//\x1b[b;aH sends sursor to (a,b) location
     std::cout << "\x1b[" << y+ofsetY << ";" << x+ofsetX << "H" << getVal(scr,x,y) << std::flush;
   }
 }
-
+//clears the terminal below screen
 void CharScreen::clearBottom()
 {
   if( height > 0 && width > 0 )
@@ -70,34 +73,44 @@ void CharScreen::clearBottom()
       << "\x1b[" << height+1 << ";0H"<<std::flush ;
   }
 }
-
+//Constuctor just cslls init
 CharScreen::CharScreen(int W,int H)
 {
+//  if(maxHeight <= 0 || maxWidth <= 0)
+  getMaxHW();
   init(W,H);
 }
 
 CharScreen::CharScreen()
 {
-  setDefault();
+//  if(maxHeight <= 0 || maxWidth <= 0)
+  getMaxHW();
+  init(maxHeight,maxWidth);
+//  setDefault();
 }
-
+//destructor just calls setDefault
 CharScreen::~CharScreen()
 {
   setDefault();
 }
-
+//resets screen 
 void CharScreen::getNewScreen(int W,int H)
 {
   setDefault();
   init(W,H);
 }
-
+//clears the screen . just puts spaces everywhere .
 int CharScreen::clear()
 {
-  return coverScreen(' ');
+  if(scr){
+    memset(scr,' ', height * width );
+    return 1;
+  }
+  else
+    return -1;
 }
-
-int CharScreen::coverScreen(char ch)
+//fills the screen with one char
+int CharScreen::fillScreen(char ch)
 {
   if(scr){
     memset(scr,ch, height * width );
@@ -108,17 +121,17 @@ int CharScreen::coverScreen(char ch)
     return -1;
 }
 
-
+//clears terminal with escape sequence
 void CharScreen::clearTerminal()
 {
   std::cout << "\x1b[H\x1b[J" << std::flush;
 }
-
+//updates a single location with a char
 int CharScreen::update( int x , int y , char ch)
 {
  return setVal(scr,x,y,ch);
 }
-
+//adds a string to certain position in screen
 int CharScreen::update(int x,int y,char *ch)
 {
   int len = std::strlen(ch);
@@ -129,13 +142,13 @@ int CharScreen::update(int x,int y,char *ch)
     return 1;
   }else return -1;
 }
-
-int CharScreen::updateLine(int y,char *ch)
+//adds a string at certain line
+int CharScreen::update(int y,char *ch)
 {
   return update(0,y,ch);
 }
-
-void CharScreen::refreash()
+//refreashes the screen
+void CharScreen::refreash(int keepOld)
 {
   for (int i = 0 ; i <= height ; ++i )
     for( int j = 0 ; j <= width ; ++j )
@@ -146,5 +159,18 @@ void CharScreen::refreash()
         setVal(oldScr,j,i,getVal(scr,j,i));
       }
     }
-  clearBottom();
+   if(!keepOld)
+    clear();
+ clearBottom();
 }
+
+//get max height and max width
+void CharScreen::getMaxHW()
+{
+  struct winsize size;
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+  maxHeight=size.ws_col;
+  maxWidth=size.ws_row;
+/* size.ws_row is the number of rows, size.ws_col is the number of columns. */
+}
+

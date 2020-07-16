@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 class CharScreen{
   private:
@@ -13,6 +15,8 @@ class CharScreen{
     char *oldScr=NULL;
     int height{0};
     int width{0};
+    int maxHeight{0};
+    int maxWidth{0};
     int ofsetX{0};
     int ofsetY{0};
     void draw(int x,int y);
@@ -20,6 +24,7 @@ class CharScreen{
     void setDefault();
     char getVal(char *sc,int x,int y);
     inline int setVal(char *sc,int x,int y,char ch);
+    void getMaxHW();
     void clearBottom();
   public:
     int getHeight() { return height; }
@@ -27,14 +32,20 @@ class CharScreen{
     int clear();
     int update( int x,int y,char ch );
     int update( int x,int y,char *ch);
-    int updateLine(int y,char *ch);
-    void refreash();
+    int update(int y,char *ch);
+    void refreash(int keepOld=0);
     void getNewScreen(int W,int H);
-    int coverScreen(char ch);
+    int fillScreen(char ch);
     void clearTerminal();
     CharScreen(int W,int H);
-    void shiftScreenLocX(int x=1) { ofsetX += x; }
-    void shiftScreenLocY(int y=1) { ofsetY += y; }
+    void shiftScreenLocX(int x=1) { 
+      if(ofsetX+x+width <= maxWidth)
+       ofsetX += x; 
+    }
+    void shiftScreenLocY(int y=1) { 
+      if(ofsetY+y+height <= maxHeight)
+       ofsetY += y; 
+    }
     CharScreen();
     ~CharScreen();
 };
